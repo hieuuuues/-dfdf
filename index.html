@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vocabulary Learning System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .chart-container {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        height: 400px;
+      }
+
+      .input-section {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+
+      input {
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        width: 300px;
+        transition: all 0.3s;
+      }
+
+      input:focus {
+        border-color: #3498db;
+        outline: none;
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+      }
+
+      button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        background: #2980b9;
+        transform: translateY(-2px);
+      }
+
+      .boxes-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .box {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .box-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .word-count {
+        background: #3498db;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 14px;
+      }
+
+      .word-item {
+        background: #f8f9fa;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .word-actions {
+        display: flex;
+        gap: 5px;
+      }
+
+      .action-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .audio-btn {
+        background: #3498db;
+        color: white;
+      }
+
+      .delete-btn {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .flashcard-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .flashcard-container {
+        width: 500px;
+        height: 300px;
+        perspective: 1000px;
+      }
+
+      .flashcard {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+        transition: transform 0.6s;
+        cursor: pointer;
+      }
+
+      .flashcard.flipped {
+        transform: rotateY(180deg);
+      }
+
+      .card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .card-back {
+        transform: rotateY(180deg);
+        background: #f8f9fa;
+      }
+
+      .flashcard-controls {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 8px;
+        background: #2ecc71;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: none;
+        z-index: 1001;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .timer {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="chart-container">
+        <canvas id="retentionChart"></canvas>
+      </div>
+
+      <div class="input-section">
+        <div class="input-group">
+          <input
+            type="text"
+            id="englishWord"
+            placeholder="Enter English word"
+          />
+          <input
+            type="text"
+            id="vietnameseMeaning"
+            placeholder="Enter Vietnamese meaning"
+          />
+          <button onclick="vocabularyManager.addWord()">Add Word</button>
+        </div>
+      </div>
+
+      <div class="boxes-container">
+        <div class="box" onclick="vocabularyManager.showFlashcards(100)">
+          <div class="box-header">
+            <h3>100%</h3>
+            <span class="word-count">0</span>
+          </div>
+          <div id="box100" class="word-list"></div>
+        </div>
+        <div class="box" onclick="vocabularyManager.showFlashcards(75)">
+          <div class="box-header">
+            <h3>75%</h3>
+            <span class="word-count">0</span>
+          </div>
+          <div id="box75" class="word-list"></div>
+        </div>
+        <div class="box" onclick="vocabularyManager.showFlashcards(50)">
+          <div class="box-header">
+            <h3>50%</h3>
+            <span class="word-count">0</span>
+          </div>
+          <div id="box50" class="word-list"></div>
+        </div>
+        <div class="box" onclick="vocabularyManager.showFlashcards(25)">
+          <div class="box-header">
+            <h3>25%</h3>
+            <span class="word-count">0</span>
+          </div>
+          <div id="box25" class="word-list"></div>
+        </div>
+        <div class="box" onclick="vocabularyManager.showFlashcards(0)">
+          <div class="box-header">
+            <h3>0%</h3>
+            <span class="word-count">0</span>
+          </div>
+          <div id="box0" class="word-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flashcard-modal" id="flashcardModal">
+      <div class="flashcard-container">
+        <div class="flashcard" onclick="vocabularyManager.flipCard()">
+          <div class="card-face">
+            <div class="word"></div>
+            <button
+              class="audio-btn action-btn"
+              onclick="vocabularyManager.playAudio(event)"
+            >
+              <i class="fas fa-volume-up"></i>
+            </button>
+          </div>
+          <div class="card-face card-back">
+            <div class="meaning"></div>
+          </div>
+        </div>
+        <div class="flashcard-controls">
+          <button onclick="vocabularyManager.previousCard()">Previous</button>
+          <button onclick="vocabularyManager.closeFlashcards()">Close</button>
+          <button onclick="vocabularyManager.nextCard()">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+      class VocabularyManager {
+        constructor() {
+          this.vocabulary = [];
+          this.currentCardIndex = 0;
+          this.currentLevel = null;
+          this.loadVocabulary();
+          this.initChart();
+          this.setupEventListeners();
+          this.updateDisplay();
+          this.initSearch();
+        }
+
+        initChart() {
+          const ctx = document
+            .getElementById("retentionChart")
+            .getContext("2d");
+          this.chart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: [
+                "Day 1",
+                "Day 2",
+                "Day 3",
+                "Day 4",
+                "Day 5",
+                "Day 6",
+                "Day 7",
+              ],
+              datasets: [
+                {
+                  label: "Memory Retention",
+                  data: [100, 75, 50, 25, 10, 5, 0],
+                  borderColor: "#3498db",
+                  backgroundColor: "rgba(52, 152, 219, 0.1)",
+                  fill: true,
+                  tension: 0.4,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true, max: 100 } },
+            },
+          });
+        }
+
+        loadVocabulary() {
+          try {
+            const saved = localStorage.getItem("vocabulary");
+            this.vocabulary = saved ? JSON.parse(saved) : [];
+            this.normalizeWordLevels();
+          } catch (error) {
+            console.error("Lỗi tải từ vựng:", error);
+            this.vocabulary = [];
+          }
+        }
+
+        saveVocabulary() {
+          try {
+            localStorage.setItem("vocabulary", JSON.stringify(this.vocabulary));
+            this.updateDisplay();
+          } catch (error) {
+            console.error("Lỗi lưu từ vựng:", error);
+            this.showNotification("Không thể lưu từ vựng", "error");
+          }
+        }
+
+        addWord() {
+          const englishInput = document.getElementById("englishWord");
+          const vietnameseInput = document.getElementById("vietnameseMeaning");
+
+          const english = this.sanitizeInput(englishInput.value);
+          const vietnamese = this.sanitizeInput(vietnameseInput.value);
+
+          if (!this.validateInputs(english, vietnamese)) return;
+
+          const newWord = {
+            id: this.generateUniqueId(),
+            english,
+            vietnamese,
+            level: 100,
+            addedTime: Date.now(),
+            lastReviewed: null,
+            reviewCount: 0,
+          };
+
+          this.vocabulary.push(newWord);
+          this.saveVocabulary();
+          this.startSpacedRepetition(newWord);
+          this.clearInputs(englishInput, vietnameseInput);
+          this.showNotification(`Đã thêm: ${english}`);
+        }
+
+        startSpacedRepetition(word) {
+          const intervals = [
+            { time: 5 * 60 * 1000, level: 75 }, // 5 minutes
+            { time: 30 * 60 * 1000, level: 50 }, // 30 minutes
+            { time: 2 * 60 * 60 * 1000, level: 25 }, // 2 hours
+            { time: 24 * 60 * 60 * 1000, level: 0 }, // 24 hours
+          ];
+
+          intervals.forEach(({ time, level }) => {
+            setTimeout(() => {
+              const index = this.vocabulary.findIndex((w) => w.id === word.id);
+              if (index !== -1) {
+                this.vocabulary[index].level = level;
+                this.vocabulary[index].lastReviewed = Date.now();
+                this.vocabulary[index].reviewCount++;
+                this.saveVocabulary();
+              }
+            }, time);
+          });
+        }
+
+        deleteWord(id) {
+          try {
+            const wordIndex = this.vocabulary.findIndex((w) => w.id === id);
+            if (wordIndex !== -1) {
+              const deletedWord = this.vocabulary[wordIndex];
+              this.vocabulary.splice(wordIndex, 1);
+              this.saveVocabulary();
+              this.showNotification(`Đã xoá: ${deletedWord.english}`);
+            }
+          } catch (error) {
+            console.error("Lỗi xoá từ:", error);
+            this.showNotification("Không thể xoá từ", "error");
+          }
+        }
+
+        updateDisplay() {
+          const levels = [100, 75, 50, 25, 0];
+          levels.forEach((level) => {
+            const wordsAtLevel = this.vocabulary.filter(
+              (word) => word.level === level
+            );
+            const box = document.getElementById(`box${level}`);
+            const countSpan = box.parentElement.querySelector(".word-count");
+
+            countSpan.textContent = wordsAtLevel.length;
+            box.innerHTML = wordsAtLevel
+              .map(this.createWordHTML.bind(this))
+              .join("");
+          });
+        }
+
+        createWordHTML(word) {
+          return `
+      <div class="word-item" data-id="${word.id}">
+        <span>${word.english}</span>
+        <div class="word-actions">
+          <button class="audio-btn action-btn" onclick="event.stopPropagation(); vocabularyManager.playAudio('${word.english}')">
+            <i class="fas fa-volume-up"></i>
+          </button>
+          <button class="delete-btn action-btn" onclick="event.stopPropagation(); vocabularyManager.deleteWord('${word.id}')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    `;
+        }
+
+        showFlashcards(level) {
+          const words = this.vocabulary.filter((word) => word.level === level);
+          if (words.length === 0) {
+            this.showNotification("Không có từ ở mức này", "error");
+            return;
+          }
+
+          this.currentLevel = level;
+          this.currentCardIndex = 0;
+          this.updateFlashcard();
+          document.getElementById("flashcardModal").style.display = "flex";
+        }
+
+        updateFlashcard() {
+          const words = this.vocabulary.filter(
+            (word) => word.level === this.currentLevel
+          );
+          if (words.length > 0) {
+            const currentWord = words[this.currentCardIndex];
+            document.querySelector(".card-face .word").textContent =
+              currentWord.english;
+            document.querySelector(
+              ".card-face.card-back .meaning"
+            ).textContent = currentWord.vietnamese;
+          }
+        }
+
+        flipCard() {
+          document.querySelector(".flashcard").classList.toggle("flipped");
+        }
+
+        nextCard() {
+          const words = this.vocabulary.filter(
+            (word) => word.level === this.currentLevel
+          );
+          this.currentCardIndex = (this.currentCardIndex + 1) % words.length;
+          document.querySelector(".flashcard").classList.remove("flipped");
+          this.updateFlashcard();
+        }
+
+        previousCard() {
+          const words = this.vocabulary.filter(
+            (word) => word.level === this.currentLevel
+          );
+          this.currentCardIndex =
+            (this.currentCardIndex - 1 + words.length) % words.length;
+          document.querySelector(".flashcard").classList.remove("flipped");
+          this.updateFlashcard();
+        }
+
+        closeFlashcards() {
+          document.getElementById("flashcardModal").style.display = "none";
+          document.querySelector(".flashcard").classList.remove("flipped");
+        }
+
+        playAudio(word) {
+          try {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = "en-US";
+            utterance.rate = 0.9;
+            speechSynthesis.speak(utterance);
+          } catch (error) {
+            console.error("Lỗi phát âm:", error);
+            this.showNotification("Không thể phát âm", "error");
+          }
+        }
+
+        setupEventListeners() {
+          document
+            .getElementById("englishWord")
+            .addEventListener("keypress", (e) => {
+              if (e.key === "Enter") {
+                document.getElementById("vietnameseMeaning").focus();
+              }
+            });
+
+          document
+            .getElementById("vietnameseMeaning")
+            .addEventListener("keypress", (e) => {
+              if (e.key === "Enter") {
+                this.addWord();
+              }
+            });
+
+          document.addEventListener("keydown", (e) => {
+            if (
+              document.getElementById("flashcardModal").style.display === "flex"
+            ) {
+              switch (e.key) {
+                case "ArrowRight":
+                  this.nextCard();
+                  break;
+                case "ArrowLeft":
+                  this.previousCard();
+                  break;
+                case " ":
+                  this.flipCard();
+                  e.preventDefault();
+                  break;
+                case "Escape":
+                  this.closeFlashcards();
+                  break;
+              }
+            }
+          });
+        }
+
+        initSearch() {
+          const searchInput = document.createElement("input");
+          searchInput.type = "text";
+          searchInput.id = "searchWords";
+          searchInput.placeholder = "Tìm kiếm từ";
+
+          const inputSection = document.querySelector(".input-section");
+          inputSection.insertBefore(searchInput, inputSection.firstChild);
+
+          searchInput.addEventListener("input", () => {
+            this.filterWords(searchInput.value);
+          });
+        }
+
+        filterWords(query) {
+          const normalizedQuery = query.toLowerCase().trim();
+          const filteredWords = this.vocabulary.filter(
+            (word) =>
+              word.english.toLowerCase().includes(normalizedQuery) ||
+              word.vietnamese.toLowerCase().includes(normalizedQuery)
+          );
+
+          this.displayFilteredWords(filteredWords);
+        }
+
+        displayFilteredWords(words) {
+          const levels = [100, 75, 50, 25, 0];
+          levels.forEach((level) => {
+            const wordsAtLevel = words.filter((word) => word.level === level);
+            const box = document.getElementById(`box${level}`);
+            const countSpan = box.parentElement.querySelector(".word-count");
+
+            countSpan.textContent = wordsAtLevel.length;
+            box.innerHTML = wordsAtLevel
+              .map(this.createWordHTML.bind(this))
+              .join("");
+          });
+        }
+
+        sanitizeInput(input) {
+          return input.trim().replace(/[<>]/g, "").replace(/\s+/g, " ");
+        }
+
+        validateInputs(english, vietnamese) {
+          if (!english || !vietnamese) {
+            this.showNotification("Vui lòng điền đầy đủ thông tin", "error");
+            return false;
+          }
+
+          if (
+            this.vocabulary.some(
+              (w) => w.english.toLowerCase() === english.toLowerCase()
+            )
+          ) {
+            this.showNotification("Từ này đã tồn tại", "error");
+            return false;
+          }
+
+          return true;
+        }
+
+        generateUniqueId() {
+          return (
+            Date.now().toString() + Math.random().toString(36).substr(2, 9)
+          );
+        }
+
+        clearInputs(englishInput, vietnameseInput) {
+          englishInput.value = "";
+          vietnameseInput.value = "";
+          englishInput.focus();
+        }
+
+        showNotification(message, type = "success") {
+          const notification = document.getElementById("notification");
+          notification.textContent = message;
+          notification.style.background =
+            type === "success" ? "#2ecc71" : "#e74c3c";
+          notification.style.display = "block";
+
+          setTimeout(() => {
+            notification.style.display = "none";
+          }, 3000);
+        }
+
+        normalizeWordLevels() {
+          const now = Date.now();
+          this.vocabulary = this.vocabulary.map((word) => {
+            if (
+              !word.lastReviewed ||
+              now - word.lastReviewed > 30 * 24 * 60 * 60 * 1000
+            ) {
+              return {
+                ...word,
+                level: 100,
+                lastReviewed: null,
+                reviewCount: 0,
+              };
+            }
+            return word;
+          });
+          this.saveVocabulary();
+        }
+      }
+
+      // Khởi tạo quản lý từ vựng
+      const vocabularyManager = new VocabularyManager();
+    </script>
+  </body>
+</html>
