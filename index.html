@@ -245,10 +245,17 @@
         color: #666;
         margin-top: 5px;
       }
+      h1 {
+        text-align: center;
+        color: #2d4059;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+      }
     </style>
   </head>
   <body>
     <div class="container">
+      <h1>Vocabulary Learning System</h1>
       <div class="chart-container">
         <canvas id="retentionChart"></canvas>
       </div>
@@ -345,6 +352,18 @@
           this.setupEventListeners();
           this.updateDisplay();
           this.initSearch();
+
+          // Kiểm tra và cập nhật levels ngay khi khởi tạo
+          this.checkAndUpdateLevels();
+          // Kiểm tra mỗi phút
+          setInterval(() => this.checkAndUpdateLevels(), 60000);
+
+          // Kiểm tra khi tab được focus lại
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+              this.checkAndUpdateLevels();
+            }
+          });
         }
 
         initChart() {
@@ -377,8 +396,17 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: { y: { beginAtZero: true, max: 100 } },
+              plugins: {
+                legend: {
+                  display: false,
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                },
+              },
             },
           });
         }
@@ -387,7 +415,7 @@
           try {
             const saved = localStorage.getItem("vocabulary");
             this.vocabulary = saved ? JSON.parse(saved) : [];
-            this.normalizeWordLevels();
+            this.checkAndUpdateLevels(); // Kiểm tra và cập nhật ngay khi load
           } catch (error) {
             console.error("Lỗi tải từ vựng:", error);
             this.vocabulary = [];
@@ -401,6 +429,48 @@
           } catch (error) {
             console.error("Lỗi lưu từ vựng:", error);
             this.showNotification("Không thể lưu từ vựng", "error");
+          }
+        }
+
+        checkAndUpdateLevels() {
+          const now = Date.now();
+          let hasChanges = false;
+
+          this.vocabulary = this.vocabulary.map((word) => {
+            if (!word.startTime) return word;
+
+            const timeElapsed = now - word.startTime;
+            let newLevel = word.level;
+
+            // Cập nhật level dựa trên thời gian đã trôi qua
+            if (timeElapsed >= 60000) {
+              // 1 phút
+              newLevel = 75;
+            }
+            if (timeElapsed >= 120000) {
+              // 2 phút
+              newLevel = 50;
+            }
+            if (timeElapsed >= 180000) {
+              // 3 phút
+              newLevel = 25;
+            }
+            if (timeElapsed >= 240000) {
+              // 4 phút
+              newLevel = 0;
+            }
+
+            if (newLevel !== word.level) {
+              hasChanges = true;
+              return { ...word, level: newLevel, lastReviewed: now };
+            }
+
+            return word;
+          });
+
+          if (hasChanges) {
+            this.saveVocabulary();
+            this.updateDisplay();
           }
         }
 
@@ -418,37 +488,15 @@
             english,
             vietnamese,
             level: 100,
-            addedTime: Date.now(),
+            startTime: Date.now(),
             lastReviewed: null,
             reviewCount: 0,
           };
 
           this.vocabulary.push(newWord);
           this.saveVocabulary();
-          this.startSpacedRepetition(newWord);
           this.clearInputs(englishInput, vietnameseInput);
           this.showNotification(`Đã thêm: ${english}`);
-        }
-
-        startSpacedRepetition(word) {
-          const intervals = [
-            { time: 5 * 60 * 1000, level: 75 }, // 5 minutes
-            { time: 30 * 60 * 1000, level: 50 }, // 30 minutes
-            { time: 2 * 60 * 60 * 1000, level: 25 }, // 2 hours
-            { time: 24 * 60 * 60 * 1000, level: 0 }, // 24 hours
-          ];
-
-          intervals.forEach(({ time, level }) => {
-            setTimeout(() => {
-              const index = this.vocabulary.findIndex((w) => w.id === word.id);
-              if (index !== -1) {
-                this.vocabulary[index].level = level;
-                this.vocabulary[index].lastReviewed = Date.now();
-                this.vocabulary[index].reviewCount++;
-                this.saveVocabulary();
-              }
-            }, time);
-          });
         }
 
         deleteWord(id) {
@@ -458,11 +506,11 @@
               const deletedWord = this.vocabulary[wordIndex];
               this.vocabulary.splice(wordIndex, 1);
               this.saveVocabulary();
-              this.showNotification(`Đã xoá: ${deletedWord.english}`);
+              this.showNotification(`Đã xóa: ${deletedWord.english}`);
             }
           } catch (error) {
-            console.error("Lỗi xoá từ:", error);
-            this.showNotification("Không thể xoá từ", "error");
+            console.error("Lỗi xóa từ:", error);
+            this.showNotification("Không thể xóa từ", "error");
           }
         }
 
@@ -484,18 +532,18 @@
 
         createWordHTML(word) {
           return `
-      <div class="word-item" data-id="${word.id}">
-        <span>${word.english}</span>
-        <div class="word-actions">
-          <button class="audio-btn action-btn" onclick="event.stopPropagation(); vocabularyManager.playAudio('${word.english}')">
-            <i class="fas fa-volume-up"></i>
-          </button>
-          <button class="delete-btn action-btn" onclick="event.stopPropagation(); vocabularyManager.deleteWord('${word.id}')">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-    `;
+            <div class="word-item" data-id="${word.id}">
+                <span>${word.english}</span>
+                <div class="word-actions">
+                    <button class="audio-btn action-btn" onclick="event.stopPropagation(); vocabularyManager.playAudio('${word.english}')">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <button class="delete-btn action-btn" onclick="event.stopPropagation(); vocabularyManager.deleteWord('${word.id}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
         }
 
         showFlashcards(level) {
@@ -582,6 +630,11 @@
               }
             });
 
+          window.addEventListener("beforeunload", () => {
+            this.checkAndUpdateLevels();
+            this.saveVocabulary();
+          });
+
           document.addEventListener("keydown", (e) => {
             if (
               document.getElementById("flashcardModal").style.display === "flex"
@@ -610,6 +663,7 @@
           searchInput.type = "text";
           searchInput.id = "searchWords";
           searchInput.placeholder = "Tìm kiếm từ";
+          searchInput.className = "search-input";
 
           const inputSection = document.querySelector(".input-section");
           inputSection.insertBefore(searchInput, inputSection.firstChild);
@@ -626,7 +680,6 @@
               word.english.toLowerCase().includes(normalizedQuery) ||
               word.vietnamese.toLowerCase().includes(normalizedQuery)
           );
-
           this.displayFilteredWords(filteredWords);
         }
 
@@ -689,28 +742,9 @@
             notification.style.display = "none";
           }, 3000);
         }
-
-        normalizeWordLevels() {
-          const now = Date.now();
-          this.vocabulary = this.vocabulary.map((word) => {
-            if (
-              !word.lastReviewed ||
-              now - word.lastReviewed > 30 * 24 * 60 * 60 * 1000
-            ) {
-              return {
-                ...word,
-                level: 100,
-                lastReviewed: null,
-                reviewCount: 0,
-              };
-            }
-            return word;
-          });
-          this.saveVocabulary();
-        }
       }
 
-      // Khởi tạo quản lý từ vựng
+      // Initialize the vocabulary manager
       const vocabularyManager = new VocabularyManager();
     </script>
   </body>
